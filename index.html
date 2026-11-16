@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Agenda</title>
 <meta name="description" content="Agenda del día, hábitos, tareas y calendario.">
 <meta name="theme-color" content="#3b1e12">
@@ -45,7 +45,9 @@
   --body:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
 }
 
-*{box-sizing:border-box}
+/* an app, not a page: it only scrolls up and down; no zooming, no dragging sideways */
+*{box-sizing:border-box;touch-action:pan-y}
+html,body{overflow-x:hidden;overscroll-behavior:none}
 html,body{height:100%;margin:0}
 body{
   font:400 15px/1.4 var(--body);color:var(--paint);
@@ -131,7 +133,7 @@ a.btn{text-decoration:none}
 
 /* ---------- views, sections, plates ---------- */
 .views{min-height:0;padding:0 12px 12px}
-.view{display:none;height:100%;min-height:0;overflow-y:auto;overscroll-behavior:contain}
+.view{display:none;height:100%;min-height:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain}
 body[data-tab="hoy"] #v-hoy{display:flex;flex-direction:column;gap:20px}
 body[data-tab="mes"] #v-mes{display:block}
 .cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:start}
@@ -256,6 +258,10 @@ input::placeholder,textarea::placeholder{color:var(--muted);opacity:.85}
 .pill{display:inline-flex;align-items:center;gap:5px;padding:0 7px;border:1px solid var(--line);border-radius:999px;font-size:11.5px;font-weight:600;color:var(--paint);line-height:18px}
 .pill i{width:8px;height:8px;border-radius:2px;background:var(--c,var(--paint))}
 .import{margin-top:18px;display:grid;gap:6px;justify-items:start}
+.add-task{display:none}
+input[type="date"],input[type="time"]{min-width:0;max-width:100%}
+/* phones zoom into any field set smaller than 16px when it is tapped */
+@media (pointer:coarse){input,select,textarea{font-size:16px !important}}
 #import-msg{font-size:13px;color:var(--muted)}
 ::view-transition-group(*){animation-duration:.28s}
 
@@ -456,6 +462,10 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
   .tick{justify-self:end;width:100%;max-width:38px;height:auto;aspect-ratio:1;border-radius:8px}
   .tick svg{width:18px;height:18px}
   .sync-pill{width:36px;padding:0;justify-content:center}
+  #task-form{display:none}                   /* on the phone a task is added from the + by the title */
+  #tasks-lists > .sub:first-child{margin-top:2px}
+  .add-task{display:grid;width:30px;height:30px;border-radius:8px}
+  .cols .sec-h{gap:6px}
   .sync-pill span{display:none}
   .sync-pill i{left:20px}
   #import-msg{font-size:12px}
@@ -529,6 +539,9 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
           <header class="sec-h">
             <h2 class="tag" id="t-tareas">Tareas</h2>
             <span class="sec-note" id="tareas-note"></span>
+            <button type="button" class="icon-btn add-task" data-act="add-task" aria-label="Nueva tarea" title="Nueva tarea">
+              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>
+            </button>
           </header>
           <div class="plate">
             <div class="plate-b" id="tareas-body">
@@ -951,27 +964,39 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
     } catch (e) { /* it only takes up space */ }
   }
   let photoBusy = false;
+  let photoErr = '';                             // the last thing that went wrong moving the photo, for Ajustes
   async function uploadPhoto() {                 // true when nothing is left to send
     await bgReady;
-    if (!linked() || !bg || !bg.blob || !bg.pending) return true;
+    if (!linked() || !bg || !bg.blob) return true;
+    if (!bg.pending && !bg.id && S.bg === undefined) bg.pending = true;   // a photo chosen before photos travelled
+    if (!bg.pending) return true;
     if (navigator.onLine === false || photoBusy) return false;
     photoBusy = true;
     try {
       const id = bg.id || await photoId(bg.blob), path = `/contents/fondos/${id}`;
+      let sha = null;
       const there = await gh(path);
-      if (there.status === 404) {
+      if (there.ok) sha = (await there.json()).sha;
+      else if (there.status === 404) {
         const r = await gh(path, { method: 'PUT', body: { message: `Agenda · ${DEVICE} · fondo`, content: await blobB64(bg.blob) } });
-        if (!r.ok && r.status !== 422) throw await ghFail(r);       // 422: it got there first from elsewhere
-      } else if (!there.ok) throw await ghFail(there);
+        if (r.ok) sha = (await r.json()).content.sha;
+        else {                                     // a 422 may mean it got there first from elsewhere, or a refusal
+          const again = await gh(path);
+          if (!again.ok) throw (r.status === 422 || r.status === 413) ? new SyncError('error', 'GitHub no ha aceptado la foto, quizá por su tamaño. Prueba con otra más ligera.') : await ghFail(r);
+          sha = (await again.json()).sha;
+        }
+      } else throw await ghFail(there);
       const prev = S.bg && S.bg.id;
       bg.id = id; bg.pending = false; await saveBg();
-      S.bg = { id, w: bg.w, h: bg.h, type: bg.blob.type || 'image/jpeg', upd: Date.now() };
+      S.bg = { id, sha, w: bg.w, h: bg.h, type: bg.blob.type || 'image/jpeg', upd: Date.now() };
+      photoErr = '';
       save();                                      // datos.json tells the other devices
       if (prev && prev !== id) deletePhoto(prev);
       return true;
-    } catch (e) { return false; }
-    finally { photoBusy = false; }
+    } catch (e) { photoErr = 'No he podido subir la foto: ' + (e.message || e); return false; }
+    finally { photoBusy = false; showPhotoLine(); }
   }
+  /* The photo comes down as a Git blob: plain JSON from the API at any size, with no redirect for Safari to refuse. */
   async function pullPhoto() {
     await bgReady;
     const want = S.bg;
@@ -982,19 +1007,31 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
     }
     if (bg && bg.id === want.id) return;           // already here: downloaded once, kept
     if (navigator.onLine === false) return;
-    photoBusy = true;
+    photoBusy = true; showPhotoLine('Descargando la foto que elegiste en otro dispositivo…');
     try {
-      const r = await gh(`/contents/fondos/${want.id}`, { accept: 'application/vnd.github.raw+json' });
-      if (!r.ok) return;
-      const raw = await r.blob(), blob = new Blob([raw], { type: want.type || 'image/jpeg' });
-      if (!(await probe(urlOf(blob)))) { dropUrl(blob); return; }
+      let sha = want.sha;
+      if (!sha) { const r = await gh(`/contents/fondos/${want.id}`); if (!r.ok) throw await ghFail(r); sha = (await r.json()).sha; }
+      const r = await gh(`/git/blobs/${sha}`);
+      if (!r.ok) throw await ghFail(r);
+      const bin = atob(String((await r.json()).content || '').replace(/\s+/g, '')), bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      const blob = new Blob([bytes], { type: want.type || 'image/jpeg' });
+      if (!(await probe(urlOf(blob)))) { dropUrl(blob); throw new Error('la imagen ha llegado dañada'); }
       const old = bg && bg.blob;
       bg = { blob, w: want.w, h: want.h, id: want.id };
       await saveBg(); applyBg(); dropUrl(old);
-      const m = document.getElementById('bg-msg'); if (m && dlg.open) m.textContent = 'Ha llegado la foto que elegiste en otro dispositivo.';
-    } catch (e) { /* the next sync tries again */ }
-    finally { photoBusy = false; }
+      photoErr = '';
+    } catch (e) { photoErr = 'No he podido descargar la foto: ' + (e.message || e) + '. Lo vuelvo a intentar en la próxima sincronización.'; }
+    finally { photoBusy = false; showPhotoLine(); }
   }
+  function photoLine() {
+    if (!WEB || !linked()) return '';
+    if (photoErr) return photoErr;
+    if (bg && bg.pending) return 'Tu foto está pendiente de subir para tus otros dispositivos.';
+    if (S.bg && S.bg.id) return bg && bg.id === S.bg.id ? 'Foto sincronizada: la misma en todos tus dispositivos.' : 'Hay una foto nueva de otro dispositivo: llegará en la próxima sincronización.';
+    return bg && bg.blob ? 'Tu foto aún no se ha subido.' : 'Ninguna foto propia: todos tus dispositivos usan la de serie.';
+  }
+  function showPhotoLine(text) { const el = document.getElementById('bg-sync'); if (el) el.textContent = text || photoLine(); }
   function changed() {                           // after every local edit
     if (!WEB) return;
     if (linked()) {
@@ -1423,6 +1460,26 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
     $('#f-toggle', body).addEventListener('click', () => { closeDlg(); toggleTask(id); });
     armDelete($('#f-del', body), () => { const x = cur(); if (x) { x.del = true; x.upd = Date.now(); save(); } closeDlg(); renderAll(); });
   }
+  function openNewTask() {
+    const body = openDlg('Nueva tarea', `
+      <div class="field"><label for="n-title">Tarea</label><input id="n-title" type="text" maxlength="200" placeholder="Qué hay que hacer"></div>
+      <div class="row2">
+        <div class="field"><label for="n-date">Entrega (opcional)</label><input id="n-date" type="date"></div>
+        <div class="field"><label for="n-time">Hora (opcional)</label><input id="n-time" type="time"></div>
+      </div>
+      <div class="field"><label for="n-subj">Asignatura</label><select id="n-subj">${subjOptions('')}</select></div>
+      <p class="hint" id="n-msg" role="status"></p>
+      <div class="dlg-actions"><button type="button" class="btn primary" id="n-add">Añadir</button></div>`);
+    const add = () => {
+      const title = $('#n-title', body).value.trim();
+      if (!title) { $('#n-msg', body).textContent = 'Escribe la tarea.'; $('#n-title', body).focus(); return; }
+      const date = $('#n-date', body).value || null, time = date ? ($('#n-time', body).value || null) : null;
+      S.tasks.push({ id: 't-' + uid(), title, subj: $('#n-subj', body).value, date, time, notes: '', done: false, created: Date.now(), upd: Date.now() });
+      save(); closeDlg(); renderAll();
+    };
+    $('#n-add', body).addEventListener('click', add);
+    $('#n-title', body).addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); add(); } });
+  }
   function toggleTask(id) {
     const x = S.tasks.find(k => k.id === id); if (!x) return;
     x.done = !x.done; x.doneAt = x.done ? Date.now() : null; x.upd = Date.now(); save();
@@ -1639,6 +1696,7 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
             <input type="range" id="bg-lum" min="${LUM_MIN}" max="${LUM_MAX}" step="5" value="${lum}"></div>` : ''}
           <input type="file" id="bg-file" accept="image/*" hidden>
           <p class="hint" id="bg-msg" role="status"></p>
+          ${WEB && linked() ? `<p class="hint" id="bg-sync" role="status">${esc(photoLine())}</p>` : ''}
         </div>
         ${WEB ? installSection() : ''}
         <div class="sect" id="sect-backup"><h3>Copia de seguridad</h3>
@@ -1789,6 +1847,7 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
     'next-day': () => goDate(addDays(ui.date, 1)),
     'today': () => goDate(todayStr()),
     'add-event': () => openEvent(null),
+    'add-task': () => openNewTask(),
     'open-item': el => { if (el.dataset.kind === 'clase') openClass(el.dataset.id, ui.date); else openEvent(el.dataset.id); },
     'open-task': el => openTask(el.dataset.id),
     'toggle-task': el => toggleTask(el.dataset.id),
@@ -1882,6 +1941,10 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
       if (WIDE.matches && ui.tab === 'hoy') renderHorario(true);
     }, 150);
   });
+
+  /* no zooming: Safari ignores the viewport setting for pinches, so its gestures are stopped here */
+  for (const t of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(t, e => e.preventDefault(), { passive: false });
+  document.addEventListener('touchmove', e => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
 
   /* another tab of the agenda on this device changed the data */
   window.addEventListener('storage', e => {
