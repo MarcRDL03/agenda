@@ -84,6 +84,10 @@ h1,h2,h3,p{margin:0}
 [hidden]{display:none !important}
 
 .app{position:relative;z-index:1;height:100%;display:grid;grid-template-rows:auto minmax(0,1fr) auto}
+/* the old Claude preview says where the agenda lives now */
+.app:has(> .old-banner){grid-template-rows:auto auto minmax(0,1fr) auto}
+.old-banner{padding:8px 16px;background:var(--light);color:var(--on-light);font-size:13.5px;line-height:1.35;text-align:center}
+.old-banner a{color:inherit;font-weight:600}
 
 /* ---------- top: stencilled date ---------- */
 .top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding:14px 16px 12px}
@@ -271,7 +275,11 @@ input::placeholder,textarea::placeholder{color:var(--muted);opacity:.85}
 .dow{padding:4px 0;text-align:center;font:400 12px var(--stencil);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
 .day{display:flex;flex-direction:column;gap:3px;min-width:0;min-height:64px;padding:5px;text-align:left;border:1px solid var(--line);border-radius:7px;background-color:rgba(255,222,190,.05);cursor:pointer}
 .day:hover{background-color:rgba(255,222,190,.11)}
-.day.out{opacity:.4}
+/* the weekday names stay on top while the weeks scroll; a dashed rule marks where a month starts */
+.dows{grid-column:1 / -1;position:sticky;top:0;z-index:3;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin:0 -4px;padding:4px 4px 5px;border-radius:7px;background:rgba(27,13,8,.94)}
+.cal-sep{grid-column:1 / -1;display:flex;align-items:center;gap:10px;margin:8px 0 1px;font:400 .95rem/1.1 var(--stencil);letter-spacing:.08em;text-transform:uppercase;color:var(--paint)}
+.cal-sep::after{content:"";flex:1;border-top:1px dashed var(--line)}
+.cal-more{grid-column:1 / -1;justify-self:center;margin:6px 0 2px}
 .day.today{border-color:var(--light);box-shadow:inset 0 0 0 1.5px var(--light)}
 .day.past{background-image:linear-gradient(to top right,transparent calc(50% - 1px),rgba(246,236,223,.5) calc(50% - 1px) calc(50% + 1px),transparent calc(50% + 1px))}
 .day.past > *{opacity:.55}
@@ -283,6 +291,7 @@ input::placeholder,textarea::placeholder{color:var(--muted);opacity:.85}
 .mchip.dl{border:1.5px dashed rgba(246,236,223,.7)}
 .mchip.dl.done{border-color:var(--line);color:var(--muted);text-decoration:line-through}
 .mchip.ci{background:rgba(255,222,190,.14);border-left:3px solid var(--paint)}
+.mchip.lab,.legend .k-lab{background-image:repeating-linear-gradient(135deg,color-mix(in oklab,var(--c,var(--paint)) 48%,transparent) 0 2px,transparent 2px 6px);box-shadow:inset 0 0 0 1.5px color-mix(in oklab,var(--c,var(--paint)) 75%,transparent)}
 .mchip .lg{display:none}
 .more{font-size:11px;color:var(--muted)}
 .mcls{display:flex;flex-wrap:wrap;gap:3px;margin-top:auto;padding-top:2px}
@@ -346,7 +355,7 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
   .mcls i{flex:none;max-width:none;height:auto;padding:0 5px;border-radius:3px;font:600 9.5px/15px var(--body);font-style:normal;letter-spacing:.03em;color:var(--paint);background:color-mix(in oklab,var(--c,var(--paint)) 46%,transparent)}
   .habits{grid-template-columns:repeat(4,minmax(0,1fr))}
   .monthnav{flex:0 1 auto;justify-content:flex-end;padding-bottom:0}
-  .monthnav strong{flex:0 0 auto;min-width:10.5em}
+  .monthnav strong{flex:0 0 auto;min-width:9em}
 }
 /* ---------- wide: one screen, agenda and tasks half and half ---------- */
 @media (min-width:980px){
@@ -524,14 +533,8 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
         <header class="sec-h">
           <h2 class="tag" id="t-mes">Calendario</h2>
           <div class="monthnav">
-            <button type="button" class="icon-btn" data-act="prev-month" aria-label="Mes anterior">
-              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </button>
             <strong id="month-label"></strong>
-            <button type="button" class="icon-btn" data-act="next-month" aria-label="Mes siguiente">
-              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </button>
-            <button type="button" class="btn small" data-act="this-month">Este mes</button>
+            <button type="button" class="btn small" id="cal-today" data-act="cal-today" hidden>Volver a hoy</button>
           </div>
         </header>
         <div class="plate">
@@ -626,6 +629,7 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
     if (typeof s.settings.upd !== 'number') s.settings.upd = Object.keys(s.settings).some(k => k !== 'upd') ? 1 : 0;
     for (const k of ['classes', 'events', 'tasks', 'habits']) s[k] = Array.isArray(s[k]) ? s[k].filter(r => r && typeof r === 'object' && r.id) : [];
     if (!s.checks || typeof s.checks !== 'object') s.checks = {};
+    if (s.bg !== undefined && (!s.bg || typeof s.bg !== 'object')) delete s.bg;   // the synced wall photo, if any
     for (const c of s.classes) { if (c.weekly) c.skip = c.skip || []; else c.dates = c.dates || []; }
     return s;
   }
@@ -693,6 +697,7 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
     b.style.setProperty('--photo-w', `${Math.round(cur.w / r * 100) / 100}px`);
   }
   const saveBg = () => idbPut('fondo', bg).then(() => true).catch(() => false);
+  let bgReady = Promise.resolve();          // settles once the photo kept on this device has been read
   /* resolves with [width, height] once the image has loaded and decoded, or null when it is not a usable image */
   const probe = url => new Promise(res => {
     const img = new Image();
@@ -724,12 +729,12 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
     })();
     return baseBusy;
   }
-  function readPhoto(file) {                // keeps the original file when it is already 4K or smaller
+  function readPhoto(file, maxBytes = 16 * 1024 * 1024) {   // keeps the original file when it is already 4K or smaller
     return new Promise((resolve, reject) => {
       const url = URL.createObjectURL(file), img = new Image();
       img.onload = () => {
         const w = img.naturalWidth, h = img.naturalHeight, max = Math.max(w, h);
-        if (max <= 4096 && file.size <= 16 * 1024 * 1024) { URL.revokeObjectURL(url); resolve({ blob: file, w, h }); return; }
+        if (max <= 4096 && file.size <= maxBytes) { URL.revokeObjectURL(url); resolve({ blob: file, w, h }); return; }
         const k = Math.min(1, 4096 / max), cw = Math.max(1, Math.round(w * k)), ch = Math.max(1, Math.round(h * k));
         const c = document.createElement('canvas'); c.width = cw; c.height = ch;
         c.getContext('2d').drawImage(img, 0, 0, cw, ch);
@@ -740,7 +745,7 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
       img.src = url;
     });
   }
-  const ui = { date: todayStr(), today: todayStr(), month: todayStr().slice(0, 7), tab: 'hoy', scroll: true };
+  const ui = { date: todayStr(), today: todayStr(), calBefore: 0, calAhead: 8, tab: 'hoy', scroll: true };
 
   const live = arr => arr.filter(x => !x.del);
   const isOn = (hid, d) => !!(S.checks[hid + '|' + d] && S.checks[hid + '|' + d].on);
@@ -823,6 +828,7 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
     const ca = a.checks || {}, cb = b.checks || {};
     for (const key of new Set([...Object.keys(ca), ...Object.keys(cb)])) out.checks[key] = newer(ca[key], cb[key]);
     out.settings = newer(a.settings || { upd: 0 }, b.settings || { upd: 0 });
+    const bgm = newer(a.bg, b.bg); if (bgm) out.bg = bgm;
     return out;
   }
 
@@ -900,6 +906,7 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
         if (rev === rev0) sync.dirty = false;
         saveSync();
         setSync('ok');
+        uploadPhoto().then(pullPhoto);
       } catch (e) {
         const known = e instanceof SyncError;
         setSync(known && e.kind === 'offline' ? 'offline' : 'error', known ? e.message : 'Algo ha fallado al sincronizar. Lo vuelvo a intentar en un minuto.');
@@ -910,6 +917,64 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
       }
     })();
     return syncing;
+  }
+
+  /* The wall photo travels too. A photo chosen on one device goes once into the private repository, as
+     fondos/<id>, and S.bg names it; every other device sees the new name on its next sync, downloads that file
+     once and keeps it. Removing it is a change like any other: the others go back to the photo that ships. */
+  const photoId = async blob => [...new Uint8Array(await crypto.subtle.digest('SHA-256', await blob.arrayBuffer()))].slice(0, 8).map(b => b.toString(16).padStart(2, '0')).join('');
+  const blobB64 = blob => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1] || ''); r.onerror = () => rej(r.error); r.readAsDataURL(blob); });
+  async function deletePhoto(id) {               // best effort: an old photo that nobody points to any more
+    try {
+      const r = await gh(`/contents/fondos/${id}`); if (!r.ok) return;
+      const j = await r.json();
+      await gh(`/contents/fondos/${id}`, { method: 'DELETE', body: { message: `Agenda · ${DEVICE} · quitar fondo anterior`, sha: j.sha } });
+    } catch (e) { /* it only takes up space */ }
+  }
+  let photoBusy = false;
+  async function uploadPhoto() {                 // true when nothing is left to send
+    await bgReady;
+    if (!linked() || !bg || !bg.blob || !bg.pending) return true;
+    if (navigator.onLine === false || photoBusy) return false;
+    photoBusy = true;
+    try {
+      const id = bg.id || await photoId(bg.blob), path = `/contents/fondos/${id}`;
+      const there = await gh(path);
+      if (there.status === 404) {
+        const r = await gh(path, { method: 'PUT', body: { message: `Agenda · ${DEVICE} · fondo`, content: await blobB64(bg.blob) } });
+        if (!r.ok && r.status !== 422) throw await ghFail(r);       // 422: it got there first from elsewhere
+      } else if (!there.ok) throw await ghFail(there);
+      const prev = S.bg && S.bg.id;
+      bg.id = id; bg.pending = false; await saveBg();
+      S.bg = { id, w: bg.w, h: bg.h, type: bg.blob.type || 'image/jpeg', upd: Date.now() };
+      save();                                      // datos.json tells the other devices
+      if (prev && prev !== id) deletePhoto(prev);
+      return true;
+    } catch (e) { return false; }
+    finally { photoBusy = false; }
+  }
+  async function pullPhoto() {
+    await bgReady;
+    const want = S.bg;
+    if (!linked() || !want || photoBusy || (bg && bg.pending)) return;
+    if (!want.id) {                                // removed on another device
+      if (bg && bg.id) { const old = bg.blob; bg = null; await saveBg(); applyBg(); dropUrl(old); if (!base) loadBase(); }
+      return;
+    }
+    if (bg && bg.id === want.id) return;           // already here: downloaded once, kept
+    if (navigator.onLine === false) return;
+    photoBusy = true;
+    try {
+      const r = await gh(`/contents/fondos/${want.id}`, { accept: 'application/vnd.github.raw+json' });
+      if (!r.ok) return;
+      const raw = await r.blob(), blob = new Blob([raw], { type: want.type || 'image/jpeg' });
+      if (!(await probe(urlOf(blob)))) { dropUrl(blob); return; }
+      const old = bg && bg.blob;
+      bg = { blob, w: want.w, h: want.h, id: want.id };
+      await saveBg(); applyBg(); dropUrl(old);
+      const m = document.getElementById('bg-msg'); if (m && dlg.open) m.textContent = 'Ha llegado la foto que elegiste en otro dispositivo.';
+    } catch (e) { /* the next sync tries again */ }
+    finally { photoBusy = false; }
   }
   function changed() {                           // after every local edit
     if (!WEB) return;
@@ -1221,34 +1286,60 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
     $('#tasks-lists').innerHTML = html;
   }
 
+  /* The calendar is a run of weeks rather than a month: it opens on last week (all crossed out) and this week (crossed
+     out up to yesterday), and carries on downwards. Every Monday the window moves on, so at most one whole week is
+     ever behind. Earlier weeks are one button away. */
+  const mondayOf = s => addDays(s, -(wdOf(s) - 1));
+  const monthName = (d, year) => `${cap(MES[d.getMonth()])}${year ? ' ' + d.getFullYear() : ''}`;
   function renderMes() {
-    const [y, m] = ui.month.split('-').map(Number), t = todayStr();
-    $('#month-label').textContent = `${cap(MES[m - 1])} ${y}`;
-    const first = `${y}-${pad(m)}-01`, last = ymd(new Date(y, m, 0, 12));
-    const start = addDays(first, -(wdOf(first) - 1)), end = addDays(last, 7 - wdOf(last));
-    let html = '<div class="legend"><span><b>EX</b> examen</span><span><b>ENT</b> entrega</span><span><b>CITA</b> cita</span>' +
-      '<span><i class="sw s-rm"></i><i class="sw s-efm"></i><i class="sw s-cdim"></i> hay clase</span><span><i class="k-past"></i> día pasado</span></div><div class="month">';
-    html += DOW3.map(d => `<div class="dow">${d}</div>`).join('');
-    for (let d = start; d <= end; d = addDays(d, 1)) {
-      const its = itemsFor(d), tasks = live(S.tasks).filter(x => x.date === d);
-      const chips = [];
-      for (const e of its.filter(i => i.kind === 'examen').sort((a, b) => toMin(a.start) - toMin(b.start)))
-        chips.push(`<span class="mchip ex ${subjCls(e.subj)}"><b>EX${e.subj ? ' ' + esc(e.subj) : ''}</b><span class="lg"> ${e.start}${e.subj ? '' : ' ' + esc(e.title)}</span></span>`);
-      for (const x of tasks)
-        chips.push(`<span class="mchip dl ${x.done ? 'done' : ''}"><b>${x.subj ? 'ENT ' + esc(x.subj) : 'TAREA'}</b><span class="lg"> ${x.time ? x.time : ''}${x.subj ? '' : ' ' + esc(x.title)}</span></span>`);
-      for (const e of its.filter(i => i.kind === 'cita').sort((a, b) => toMin(a.start) - toMin(b.start)))
-        chips.push(`<span class="mchip ci"><b>CITA</b><span class="lg"> ${e.start} ${esc(e.title)}</span></span>`);
-      const subs = [...new Set(its.filter(i => i.kind === 'clase').map(i => i.subj))];
-      const more = chips.length > 3 ? `<span class="more">+${chips.length - 3} más</span>` : '';
-      const nEx = its.filter(i => i.kind === 'examen').length, nCi = its.filter(i => i.kind === 'cita').length;
-      const label = [cap(fmtLong(d)), d < t ? 'ya pasado' : '', subs.length ? 'clases de ' + subs.join(', ') : '', nEx ? plural(nEx, 'examen', 'exámenes') : '', tasks.length ? plural(tasks.length, 'entrega', 'entregas') : '', nCi ? plural(nCi, 'cita', 'citas') : ''].filter(Boolean).join(', ');
-      html += `<button type="button" class="day ${d.slice(0, 7) !== ui.month ? 'out' : ''} ${d === t ? 'today' : ''} ${d < t ? 'past' : ''}" data-act="pick-day" data-d="${d}" aria-label="${esc(label)}" title="${esc(label)}">
-        <span class="day-n">${fromYmd(d).getDate()}</span>${chips.slice(0, 3).join('')}${more}
-        ${subs.length ? `<span class="mcls">${subs.map(s => `<i class="${subjCls(s)}">${esc(s)}</i>`).join('')}</span>` : ''}
-      </button>`;
+    const t = todayStr();
+    const start = addDays(mondayOf(t), -7 * (1 + ui.calBefore));
+    const weeks = 2 + ui.calBefore + ui.calAhead, end = addDays(start, weeks * 7 - 1);
+    const s0 = fromYmd(start), e0 = fromYmd(end);
+    $('#month-label').textContent = `${s0.getDate()} ${MES3[s0.getMonth()]} – ${e0.getDate()} ${MES3[e0.getMonth()]}${e0.getFullYear() !== s0.getFullYear() ? ' ' + e0.getFullYear() : ''}`;
+    $('#cal-today').hidden = ui.calBefore === 0;
+    let html = '<div class="legend"><span><b>EX</b> examen</span><span><b>LAB</b> práctica</span><span><b>ENT</b> entrega</span><span><b>CITA</b> cita</span>' +
+      '<span><i class="sw s-rm"></i><i class="sw s-efm"></i><i class="sw s-cdim"></i> hay clase</span><span><i class="k-past"></i> día pasado</span></div>';
+    html += '<div class="month"><div class="dows" aria-hidden="true">' + DOW3.map(d => `<span class="dow">${d}</span>`).join('') + '</div>';
+    html += '<button type="button" class="btn small cal-more" data-act="cal-before">Ver semanas anteriores</button>';
+    for (let w = 0; w < weeks; w++) {
+      const ws = addDays(start, 7 * w), we = addDays(ws, 6);
+      const first = [0, 1, 2, 3, 4, 5, 6].map(i => addDays(ws, i)).find(d => d.endsWith('-01'));
+      if (w === 0) {
+        const a = fromYmd(ws), b = fromYmd(we);
+        html += `<div class="cal-sep">${a.getMonth() === b.getMonth() ? monthName(a, true) : `${monthName(a, a.getFullYear() !== b.getFullYear())} · ${monthName(b, true)}`}</div>`;
+      } else if (first) {
+        const f = fromYmd(first);
+        html += `<div class="cal-sep">${monthName(f, f.getMonth() === 0 || f.getFullYear() !== s0.getFullYear())}</div>`;
+      }
+      for (let i = 0; i < 7; i++) {
+        const d = addDays(ws, i), dd = fromYmd(d);
+        const its = itemsFor(d), tasks = live(S.tasks).filter(x => x.date === d);
+        const byStart = (a, b) => toMin(a.start) - toMin(b.start);
+        const exams = its.filter(x => x.kind === 'examen').sort(byStart), labs = its.filter(x => x.kind === 'clase' && x.lab).sort(byStart);
+        const citas = its.filter(x => x.kind === 'cita').sort(byStart);
+        const chips = [];
+        for (const e of exams) chips.push(`<span class="mchip ex ${subjCls(e.subj)}"><b>EX${e.subj ? ' ' + esc(e.subj) : ''}</b><span class="lg"> ${e.start}${e.subj ? '' : ' ' + esc(e.title)}</span></span>`);
+        for (const e of labs) chips.push(`<span class="mchip lab ${subjCls(e.subj)}"><b>LAB ${esc(e.subj)}</b><span class="lg"> ${e.start}</span></span>`);
+        for (const x of tasks) chips.push(`<span class="mchip dl ${x.done ? 'done' : ''}"><b>${x.subj ? 'ENT ' + esc(x.subj) : 'TAREA'}</b><span class="lg"> ${x.time ? x.time : ''}${x.subj ? '' : ' ' + esc(x.title)}</span></span>`);
+        for (const e of citas) chips.push(`<span class="mchip ci"><b>CITA</b><span class="lg"> ${e.start} ${esc(e.title)}</span></span>`);
+        const subs = [...new Set(its.filter(x => x.kind === 'clase' && !x.lab).map(x => x.subj))];
+        const more = chips.length > 3 ? `<span class="more">+${chips.length - 3} más</span>` : '';
+        const label = [cap(fmtLong(d)), d < t ? 'ya pasado' : '', subs.length ? 'clases de ' + subs.join(', ') : '',
+          labs.length ? 'prácticas de ' + labs.map(x => x.subj).join(', ') : '', exams.length ? plural(exams.length, 'examen', 'exámenes') : '',
+          tasks.length ? plural(tasks.length, 'entrega', 'entregas') : '', citas.length ? plural(citas.length, 'cita', 'citas') : ''].filter(Boolean).join(', ');
+        html += `<button type="button" class="day ${d === t ? 'today' : ''} ${d < t ? 'past' : ''}" data-act="pick-day" data-d="${d}" aria-label="${esc(label)}" title="${esc(label)}">
+          <span class="day-n">${dd.getDate()}${dd.getDate() === 1 ? ' ' + MES3[dd.getMonth()] : ''}</span>${chips.slice(0, 3).join('')}${more}
+          ${subs.length ? `<span class="mcls">${subs.map(s => `<i class="${subjCls(s)}">${esc(s)}</i>`).join('')}</span>` : ''}
+        </button>`;
+      }
     }
-    $('#mes-body').innerHTML = html + '</div>';
+    html += '<button type="button" class="btn small cal-more" data-act="cal-more">Mostrar más semanas</button></div>';
+    const sc = calScroller(), top = sc ? sc.scrollTop : 0;
+    $('#mes-body').innerHTML = html;
+    if (sc) sc.scrollTop = top;                 // a sync or a new day redraws it without jumping
   }
+  const calScroller = () => (WIDE.matches ? $('#mes-body') : $('#v-mes'));
 
   function renderAll() { renderOnboard(); renderTop(); renderHorario(true); renderHabitos(); renderTareas(); renderMes(); }
   function setTab(tab) {
@@ -1304,6 +1395,7 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
     $('#f-save', body).addEventListener('click', () => {
       const title = $('#f-title', body).value.trim(); if (!title) { $('#f-title', body).focus(); return; }
       const x = cur(); if (!x) { closeDlg(); return; }
+      if (x.aid && x.srcDate === undefined) { x.srcDate = x.date; x.srcTime = x.time || null; }   // what Atenea said
       x.title = title; x.date = $('#f-date', body).value || null; x.time = x.date ? ($('#f-time', body).value || null) : null;
       x.subj = $('#f-subj', body).value; x.notes = $('#f-notes', body).value.trim(); x.upd = Date.now();
       save(); closeDlg(); renderAll();
@@ -1516,7 +1608,8 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
           <p class="hint">${BASE_BG
             ? `De serie lleva una foto real: «${esc(BASE_BG.name)}», ${BASE_BG.w} × ${BASE_BG.h} px (${esc(BASE_BG.credit)}).${BASE_BG.note ? ' ' + esc(BASE_BG.note) : ''}${mine ? '' : base ? ' Es la que se ve ahora.' : ' Aquí aún no se ha cargado y se ve el acero dibujado.'}`
             : 'Pon una foto real de acero corten, o la imagen que quieras.'}
-            ${mine ? `Ahora se ve tu foto, de ${bg.w} × ${bg.h} px, guardada solo en este dispositivo.` : `Si eliges ${BASE_BG ? 'otra' : 'una'}, se usa tal cual hasta 4K (4096 px) y se queda solo en este dispositivo.`}</p>
+            ${mine ? `Ahora se ve tu foto, de ${bg.w} × ${bg.h} px${bg.id ? ', la misma en todos tus dispositivos' : bg.pending ? ', pendiente de subir para tus otros dispositivos' : ', guardada solo en este dispositivo'}.`
+              : `Si eliges ${BASE_BG ? 'otra' : 'una'}, se usa tal cual hasta 4K (4096 px)${WEB && linked() ? ' y pasa a tus otros dispositivos: cada uno la descarga una vez' : ' y se queda solo en este dispositivo'}.`}</p>
           <div class="dlg-actions" style="justify-content:flex-start">
             <button type="button" class="btn" id="bg-pick">${mine || BASE_BG ? 'Elegir otra foto…' : 'Elegir foto…'}</button>
             ${realFits(shownBg()) ? `<button type="button" class="btn" id="bg-fit" aria-pressed="${fit === 'real'}" title="En detalle, cada píxel de la foto ocupa un píxel de la pantalla">${fit === 'real' ? 'Ver la foto entera' : 'Ver la foto en detalle'}</button>` : ''}
@@ -1542,11 +1635,19 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
         const f = e.target.files && e.target.files[0]; if (!f) return;
         $('#bg-msg', body).textContent = 'Preparando la foto…';
         try {
-          const r = await readPhoto(f), old = bg && bg.blob;
-          bg = { blob: r.blob, w: r.w, h: r.h };
+          const shared = WEB && linked();
+          const r = await readPhoto(f, shared ? 8 * 1024 * 1024 : undefined), old = bg && bg.blob;
+          bg = { blob: r.blob, w: r.w, h: r.h, pending: shared };
           const saved = await saveBg();
           applyBg(); dropUrl(old); draw();
-          $('#bg-msg').textContent = saved ? `Fondo cambiado (${r.w} × ${r.h} px).` : 'La foto se ve ahora, pero el navegador no deja guardarla: al recargar volverá el fondo anterior.';
+          const say = t => { const m = $('#bg-msg'); if (m) m.textContent = t; };
+          const done = saved ? `Fondo cambiado (${r.w} × ${r.h} px).` : 'La foto se ve ahora, pero el navegador no deja guardarla: al recargar volverá el fondo anterior.';
+          say(done);
+          if (shared) {
+            say(done + ' Subiéndola para tus otros dispositivos…');
+            const ok = await uploadPhoto();
+            say(done + (ok ? ' Tus otros dispositivos la descargarán una vez, la próxima vez que abran la agenda.' : ' Ahora no he podido subirla: lo intentaré sola en cuanto haya conexión.'));
+          }
         } catch (err) { $('#bg-msg', body).textContent = 'No he podido abrir esa imagen. Prueba con un JPG o un PNG.'; }
       });
       const fitBtn = $('#bg-fit', body), clearBtn = $('#bg-clear', body), lumIn = $('#bg-lum', body);
@@ -1560,8 +1661,9 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
         applyBg(); draw();
       });
       if (clearBtn) clearBtn.addEventListener('click', () => {
-        const old = bg.blob, said = BASE_BG ? 'Tu foto está quitada: vuelve la de serie.' : 'Foto quitada.';
+        const old = bg.blob, oldId = bg.id, said = BASE_BG ? 'Tu foto está quitada: vuelve la de serie.' : 'Foto quitada.';
         bg = null; saveBg(); applyBg(); dropUrl(old);
+        if (WEB && linked() && S.bg && S.bg.id) { S.bg = { id: null, upd: Date.now() }; save(); if (oldId) deletePhoto(oldId); }
         draw(); $('#bg-msg').textContent = said;
         if (!base) loadBase().then(() => { if (dlg.open && $('#bg-pick')) { draw(); $('#bg-msg').textContent = said; } });
       });
@@ -1641,15 +1743,18 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
       const ex = S.tasks.find(x => x.aid === aid);
       if (ex) {
         if (ex.del) { other++; continue; }
-        let ch = false;
-        if (ex.date !== when.date || (ex.time || null) !== when.time) { ex.date = when.date; ex.time = when.time; ch = true; }
+        let ch = false, src = false;
+        const was = ex.srcDate !== undefined ? [ex.srcDate, ex.srcTime] : [ex.date, ex.time || null];
+        if (was[0] !== when.date || was[1] !== when.time) { ex.date = when.date; ex.time = when.time; ch = true; }   // moved in Atenea
+        if (ex.srcDate !== when.date || ex.srcTime !== when.time) { ex.srcDate = when.date; ex.srcTime = when.time; src = true; }
         if (ex.title === ex.src && ex.title !== title) { ex.title = title; ch = true; }
         ex.src = title;
-        if (ch) { ex.upd = now; moved++; } else same++;
+        if (ch || src) ex.upd = now;
+        if (ch) moved++; else same++;
         continue;
       }
       if (when.date < t) { past++; continue; }
-      S.tasks.push({ id: 't-' + aid, aid, title, src: title, subj, date: when.date, time: when.time, notes: unesc(e.DESCRIPTION).trim(), done: false, created: now, upd: now });
+      S.tasks.push({ id: 't-' + aid, aid, title, src: title, srcDate: when.date, srcTime: when.time, subj, date: when.date, time: when.time, notes: unesc(e.DESCRIPTION).trim(), done: false, created: now, upd: now });
       added++;
     }
     save(); renderAll();
@@ -1676,9 +1781,9 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
     'habit-history': el => openHistory(el.dataset.h),
     'settings': el => openSettings(el.dataset.sect),
     'close-dlg': () => closeDlg(),
-    'prev-month': () => { const [y, m] = ui.month.split('-').map(Number); ui.month = ymd(new Date(y, m - 2, 1, 12)).slice(0, 7); renderMes(); },
-    'next-month': () => { const [y, m] = ui.month.split('-').map(Number); ui.month = ymd(new Date(y, m, 1, 12)).slice(0, 7); renderMes(); },
-    'this-month': () => { ui.month = todayStr().slice(0, 7); renderMes(); },
+    'cal-before': () => { ui.calBefore += 4; renderMes(); const sc = calScroller(); if (sc) sc.scrollTop = 0; },
+    'cal-more': () => { ui.calAhead += 8; renderMes(); },
+    'cal-today': () => { ui.calBefore = 0; ui.calAhead = 8; renderMes(); const sc = calScroller(); if (sc) sc.scrollTop = 0; },
     'pick-day': el => {
       ui.date = el.dataset.d; setTab('hoy');
       if (!WIDE.matches) requestAnimationFrame(() => $('#p-horario').scrollIntoView({ block: 'start' }));
@@ -1715,7 +1820,7 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
   /* keep "today" honest while the page stays open */
   function tick() {
     const t = todayStr();
-    if (t !== ui.today) { if (ui.date === ui.today) ui.date = t; ui.today = t; ui.month = t.slice(0, 7); renderAll(); }
+    if (t !== ui.today) { if (ui.date === ui.today) ui.date = t; ui.today = t; renderAll(); }
     else if (ui.date === t) renderHorario(true);
     if (WEB && syncSt.state === 'ok') setSync('ok');   // keeps "sincronizada hace…" honest
   }
@@ -1724,10 +1829,10 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
 
   setTab('hoy');
   renderAll();
-  (async () => {                           // own photo first; otherwise the one that ships with the app
+  bgReady = (async () => {                 // own photo first; otherwise the one that ships with the app
     try {
       const v = await idbGet('fondo');
-      if (v && v.blob && await probe(urlOf(v.blob))) { bg = { blob: v.blob, w: v.w, h: v.h }; applyBg(); }
+      if (v && v.blob && await probe(urlOf(v.blob))) { bg = { blob: v.blob, w: v.w, h: v.h, id: v.id, pending: v.pending }; applyBg(); }
     } catch (e) { /* no stored photo, or storage unavailable */ }
     if (!bg) loadBase();
   })();
@@ -1777,7 +1882,7 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
   window.__agenda = {
     importIcs, parseIcs, cleanTitle, itemsFor, mergeStates, syncNow,
     get state() { return S; },
-    get fondo() { return { mine: !!(bg && bg.blob), base: !!base, fit, lum, ships: BASE_BG }; },
+    get fondo() { return { mine: !!(bg && bg.blob), base: !!base, fit, lum, ships: BASE_BG, id: bg ? bg.id || null : null, pending: !!(bg && bg.pending), size: bg && bg.blob ? bg.blob.size : 0 }; },
     get sync() { return { state: syncSt.state, msg: syncSt.msg, linked: linked(), dirty: !!sync.dirty, at: sync.at || 0 }; },
   };
 })();
