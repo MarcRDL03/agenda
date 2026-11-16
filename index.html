@@ -90,11 +90,10 @@ h1,h2,h3,p{margin:0}
 .old-banner a{color:inherit;font-weight:600}
 
 /* ---------- top: stencilled date ---------- */
-.top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding:14px 16px 12px}
+.top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:12px 16px 10px}
 /* Any photo may end up behind the page. Only the big stencilled date sits straight on the wall, with a dark glow
    around its letters; every small line of text gets its own strip of plate. */
 .top h1{font:400 clamp(1.7rem,4.2vw,2.9rem)/1 var(--stencil);letter-spacing:.03em;text-transform:uppercase;color:var(--paint);text-shadow:0 2px 0 rgba(20,8,3,.75),0 0 3px rgba(20,8,3,.8),0 0 14px rgba(20,8,3,.7),0 0 30px rgba(20,8,3,.6);text-wrap:balance}
-#h-sub{width:fit-content;max-width:100%;margin-top:8px;padding:4px 10px 3px;border:1px solid var(--line);border-radius:6px;background:var(--plate);font-size:13.5px;color:var(--paint);font-variant-numeric:tabular-nums}
 .top-actions{display:flex;align-items:center;gap:8px;flex:none}
 .seg{display:none;padding:3px;border:1px solid var(--line);border-radius:10px;background:var(--plate)}
 .seg button{border:0;background:none;padding:7px 16px 6px;border-radius:7px;cursor:pointer;font:400 15px/1 var(--stencil);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
@@ -164,23 +163,23 @@ body[data-tab="mes"] #v-mes{display:block}
 
 /* ---------- Hábitos, in small ---------- */
 .habits{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.habit{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 10px;align-items:center;padding:9px 11px 11px;background:var(--glass);-webkit-backdrop-filter:var(--frost);backdrop-filter:var(--frost);border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 24px rgba(12,4,1,.35)}
-.habit-open{display:flex;flex-direction:column;gap:2px;min-width:0;padding:2px 0;border:0;border-radius:6px;background:none;color:inherit;text-align:left;cursor:pointer}
-.habit-name{font:600 15px/1.2 var(--body);overflow-wrap:anywhere}
-.chev{margin-left:5px;font-weight:400;color:var(--muted)}
+/* a habit: its name, the last five weeks as rows of seven (Monday first) and the tick for today */
+.habit{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-areas:"name name" "cells tick";align-items:end;gap:7px 10px;padding:8px 10px 9px;background:var(--glass);-webkit-backdrop-filter:var(--frost);backdrop-filter:var(--frost);border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 24px rgba(12,4,1,.35)}
+.habit-open{grid-area:name;display:flex;align-items:baseline;gap:5px;min-width:0;padding:0;border:0;border-radius:6px;background:none;color:inherit;text-align:left;cursor:pointer}
+.habit-name{min-width:0;font:600 14px/1.2 var(--body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chev{flex:none;font-weight:400;color:var(--muted)}
 .habit-open:hover .chev{color:var(--light)}
-.habit-meta{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
-.habit-meta b{color:var(--paint);font-weight:600}
-.tick{flex:none;width:40px;height:40px;display:grid;place-items:center;padding:0;border:2px solid rgba(246,236,223,.7);border-radius:10px;background:transparent;color:var(--paint);cursor:pointer}
+.tick{grid-area:tick;justify-self:end;width:34px;height:34px;display:grid;place-items:center;padding:0;border:2px solid rgba(246,236,223,.7);border-radius:10px;background:transparent;color:var(--paint);cursor:pointer}
 .tick svg{opacity:.4}
 .tick:hover svg{opacity:.75}
 .tick.on{background:var(--light);border-color:var(--light);color:var(--on-light);box-shadow:0 0 16px rgba(255,196,120,.55)}
 .tick.on svg{opacity:1}
-.cells{grid-column:1 / -1;display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:3px}
-.cell{aspect-ratio:1;min-width:0;padding:0;border:0;border-radius:3px;background:rgba(255,222,190,.09);box-shadow:inset 0 0 0 1px rgba(255,222,190,.12);cursor:pointer}
+.cells{grid-area:cells;display:grid;grid-template-columns:repeat(7,var(--cell,12px));grid-auto-rows:var(--cell,12px);gap:3px}
+.cell{display:block;min-width:0;padding:0;border:0;border-radius:3px;background:rgba(255,222,190,.09);box-shadow:inset 0 0 0 1px rgba(255,222,190,.12);cursor:pointer}
 .cell:hover{box-shadow:inset 0 0 0 1.5px var(--paint)}
 .cell.on{background:var(--light);box-shadow:0 0 7px rgba(255,196,120,.55)}
 .cell.today{outline:1.5px solid var(--paint);outline-offset:1px}
+.cell.future{opacity:.3;cursor:default;box-shadow:inset 0 0 0 1px rgba(255,222,190,.08)}
 .none{color:var(--muted);font-size:13.5px;padding:8px 0}
 .habits > .none{grid-column:1 / -1;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--plate);color:var(--paint)}
 
@@ -277,8 +276,9 @@ input::placeholder,textarea::placeholder{color:var(--muted);opacity:.85}
 .day:hover{background-color:rgba(255,222,190,.11)}
 /* the weekday names stay on top while the weeks scroll; a dashed rule marks where a month starts */
 .dows{grid-column:1 / -1;position:sticky;top:0;z-index:3;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin:0 -4px;padding:4px 4px 5px;border-radius:7px;background:rgba(27,13,8,.94)}
-.cal-sep{grid-column:1 / -1;display:flex;align-items:center;gap:10px;margin:8px 0 1px;font:400 .95rem/1.1 var(--stencil);letter-spacing:.08em;text-transform:uppercase;color:var(--paint)}
-.cal-sep::after{content:"";flex:1;border-top:1px dashed var(--line)}
+.cal-sep{grid-column:1 / -1;display:flex;align-items:center;gap:10px;min-height:30px;margin:6px 0 0;font:400 .95rem/1.1 var(--stencil);letter-spacing:.08em;text-transform:uppercase;color:var(--paint)}
+.cal-sep i{flex:1;border-top:1px dashed var(--line)}
+.cal-back{min-height:28px;font:600 12.5px/1 var(--body);letter-spacing:0;text-transform:none}
 .cal-more{grid-column:1 / -1;justify-self:center;margin:6px 0 2px}
 .day.today{border-color:var(--light);box-shadow:inset 0 0 0 1.5px var(--light)}
 .day.past{background-image:linear-gradient(to top right,transparent calc(50% - 1px),rgba(246,236,223,.5) calc(50% - 1px) calc(50% + 1px),transparent calc(50% + 1px))}
@@ -359,7 +359,7 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
 }
 /* ---------- wide: one screen, agenda and tasks half and half ---------- */
 @media (min-width:980px){
-  .top{padding:18px 24px 14px}
+  .top{padding:10px 20px 10px 24px}
   .views{padding:0 24px 22px}
   .tabs{display:none}
   .seg{display:inline-flex}
@@ -371,7 +371,8 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
   #p-mes{flex:1;min-height:0}
   .sec-habits{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:22px}
   .sec-habits .sec-h{flex-direction:column;align-items:flex-start;justify-content:center;gap:10px;min-height:0}
-  .cells{grid-template-columns:repeat(15,minmax(0,1fr))}
+  .habit{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"name cells" "tick cells";align-items:start;padding:9px 11px}
+  .tick{justify-self:start;align-self:end}
   .cols{gap:20px;min-height:0;align-items:stretch}
   .cols .sec,#p-mes{min-height:0}
   .cols .plate,#p-mes .plate{flex:1}
@@ -445,7 +446,6 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
   <header class="top">
     <div class="top-date">
       <h1 id="h-date">Agenda</h1>
-      <p id="h-sub"></p>
     </div>
     <div class="top-actions">
       <button type="button" class="sync-pill" id="sync-pill" data-act="settings" data-sect="sync" hidden>
@@ -605,6 +605,7 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
     return 1 + Math.round(((d - w1) / 86400000 - 3 + ((w1.getDay() + 6) % 7)) / 7);
   };
   const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+  const mondayOf = s => addDays(s, -(wdOf(s) - 1));
 
   const SUBJ = {
     RM: { name: 'Resistència de Materials', cls: 's-rm' },
@@ -1078,7 +1079,7 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
     if (ci) parts.push(plural(ci, 'cita', 'citas'));
     if (due) parts.push(plural(due, 'entrega', 'entregas'));
     const hs = habits(), hd = hs.filter(h => isOn(h.id, t)).length;
-    $('#h-sub').textContent = `Semana ${isoWeek(t)} · ${parts.length ? 'hoy ' + parts.join(', ') : 'hoy sin clases ni entregas'}${hs.length ? ` · hábitos ${hd}/${hs.length}` : ''}`;
+    $('#h-date').title = `Semana ${isoWeek(t)} · ${parts.length ? 'hoy ' + parts.join(', ') : 'hoy sin clases ni entregas'}${hs.length ? ` · hábitos ${hd}/${hs.length}` : ''}`;
   }
 
   function renderHorario(keepScroll) {
@@ -1178,21 +1179,24 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
     return n;
   }
   function renderHabitos() {
-    const t = todayStr(), days = [];
-    for (let i = 29; i >= 0; i--) days.push(addDays(t, -i));
+    const t = todayStr(), start = addDays(mondayOf(t), -28), days = [];
+    for (let i = 0; i < 35; i++) days.push(addDays(start, i));
     const hs = habits();
     let html = '';
     for (const h of hs) {
-      const count = days.filter(d => isOn(h.id, d)).length, st = streak(h.id), on = isOn(h.id, t);
+      const on = isOn(h.id, t);
       html += `<article class="habit">
         <button type="button" class="habit-open" data-act="habit-history" data-h="${esc(h.id)}" title="Ver todo el historial de ${esc(h.name)}">
-          <span class="habit-name" role="heading" aria-level="3">${esc(h.name)}<span class="chev" aria-hidden="true">›</span></span>
-          <span class="habit-meta">${st ? `Racha <b>${st}</b>` : 'Sin racha'} · <b>${count}</b>/30</span>
+          <span class="habit-name" role="heading" aria-level="3">${esc(h.name)}</span><span class="chev" aria-hidden="true">›</span>
         </button>
-        <button type="button" class="tick ${on ? 'on' : ''}" data-act="toggle-cell" data-h="${esc(h.id)}" data-d="${t}" aria-pressed="${on}" aria-label="Marcar hoy: ${esc(h.name)}" title="${on ? 'Hecho hoy. Pulsa para desmarcar' : 'Marcar como hecho hoy'}">${CHECK_BIG}</button>
-        <div class="cells" role="group" aria-label="Últimos 30 días de ${esc(h.name)}">` +
-        days.map(d => { const o = isOn(h.id, d); return `<button type="button" class="cell ${o ? 'on' : ''} ${d === t ? 'today' : ''}" data-act="toggle-cell" data-h="${esc(h.id)}" data-d="${d}" aria-pressed="${o}" aria-label="${fmtShort(d)}: ${o ? 'hecho' : 'sin hacer'}" title="${fmtShort(d)} · ${o ? 'hecho' : 'sin hacer'}"></button>`; }).join('') +
+        <div class="cells" role="group" aria-label="${esc(h.name)}: esta semana y las cuatro anteriores, de lunes a domingo">` +
+        days.map(d => {
+          if (d > t) return `<span class="cell future" title="${fmtShort(d)}"></span>`;
+          const o = isOn(h.id, d);
+          return `<button type="button" class="cell ${o ? 'on' : ''} ${d === t ? 'today' : ''}" data-act="toggle-cell" data-h="${esc(h.id)}" data-d="${d}" aria-pressed="${o}" aria-label="${fmtShort(d)}: ${o ? 'hecho' : 'sin hacer'}" title="${fmtShort(d)} · ${o ? 'hecho' : 'sin hacer'}"></button>`;
+        }).join('') +
         `</div>
+        <button type="button" class="tick ${on ? 'on' : ''}" data-act="toggle-cell" data-h="${esc(h.id)}" data-d="${t}" aria-pressed="${on}" aria-label="Marcar hoy: ${esc(h.name)}" title="${on ? 'Hecho hoy. Pulsa para desmarcar' : 'Marcar como hecho hoy'}">${CHECK_BIG}</button>
       </article>`;
     }
     if (!hs.length) html = '<p class="none">Aún no hay hábitos. Pulsa «Editar» para añadir el primero.</p>';
@@ -1289,7 +1293,6 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
   /* The calendar is a run of weeks rather than a month: it opens on last week (all crossed out) and this week (crossed
      out up to yesterday), and carries on downwards. Every Monday the window moves on, so at most one whole week is
      ever behind. Earlier weeks are one button away. */
-  const mondayOf = s => addDays(s, -(wdOf(s) - 1));
   const monthName = (d, year) => `${cap(MES[d.getMonth()])}${year ? ' ' + d.getFullYear() : ''}`;
   function renderMes() {
     const t = todayStr();
@@ -1298,19 +1301,18 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
     const s0 = fromYmd(start), e0 = fromYmd(end);
     $('#month-label').textContent = `${s0.getDate()} ${MES3[s0.getMonth()]} – ${e0.getDate()} ${MES3[e0.getMonth()]}${e0.getFullYear() !== s0.getFullYear() ? ' ' + e0.getFullYear() : ''}`;
     $('#cal-today').hidden = ui.calBefore === 0;
-    let html = '<div class="legend"><span><b>EX</b> examen</span><span><b>LAB</b> práctica</span><span><b>ENT</b> entrega</span><span><b>CITA</b> cita</span>' +
-      '<span><i class="sw s-rm"></i><i class="sw s-efm"></i><i class="sw s-cdim"></i> hay clase</span><span><i class="k-past"></i> día pasado</span></div>';
-    html += '<div class="month"><div class="dows" aria-hidden="true">' + DOW3.map(d => `<span class="dow">${d}</span>`).join('') + '</div>';
-    html += '<button type="button" class="btn small cal-more" data-act="cal-before">Ver semanas anteriores</button>';
+    let html = '<div class="month"><div class="dows" aria-hidden="true">' + DOW3.map(d => `<span class="dow">${d}</span>`).join('') + '</div>';
+    const sep = (text, extra = '') => `<div class="cal-sep"><span>${text}</span><i></i>${extra}</div>`;
     for (let w = 0; w < weeks; w++) {
       const ws = addDays(start, 7 * w), we = addDays(ws, 6);
       const first = [0, 1, 2, 3, 4, 5, 6].map(i => addDays(ws, i)).find(d => d.endsWith('-01'));
       if (w === 0) {
         const a = fromYmd(ws), b = fromYmd(we);
-        html += `<div class="cal-sep">${a.getMonth() === b.getMonth() ? monthName(a, true) : `${monthName(a, a.getFullYear() !== b.getFullYear())} · ${monthName(b, true)}`}</div>`;
+        html += sep(a.getMonth() === b.getMonth() ? monthName(a, true) : `${monthName(a, a.getFullYear() !== b.getFullYear())} · ${monthName(b, true)}`,
+          '<button type="button" class="btn small cal-back" data-act="cal-before">↑ Semanas anteriores</button>');
       } else if (first) {
         const f = fromYmd(first);
-        html += `<div class="cal-sep">${monthName(f, f.getMonth() === 0 || f.getFullYear() !== s0.getFullYear())}</div>`;
+        html += sep(monthName(f, f.getMonth() === 0 || f.getFullYear() !== s0.getFullYear()));
       }
       for (let i = 0; i < 7; i++) {
         const d = addDays(ws, i), dd = fromYmd(d);

@@ -1,7 +1,7 @@
 /* Offline shell for the agenda. Every file of the app goes into one cache named after this build, so the app opens
    with no connection. A new build is a new sw.js: the browser installs it, it fetches the new files, and the page offers
    to reload. Only this site's own files are handled here: GitHub and anything else go straight to the network. */
-const CACHE = "agenda-4eb04f20328f";
+const CACHE = "agenda-e54cebf1d9ec";
 const FILES = ["./", "index.html", "manifest.webmanifest", "fondo.jpg", "icon-192.png", "icon-512.png", "icon-maskable.png", "apple-touch-icon.png"];
 
 self.addEventListener('install', e => {
