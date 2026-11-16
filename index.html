@@ -389,6 +389,7 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
   .habit-name{max-width:9.5em}
   .tick{justify-self:start;align-self:end}
   .cols{gap:20px;min-height:0;align-items:stretch}
+  #p-tareas{order:-1}                        /* tasks on the left, then the day, then (on big screens) the calendar */
   .cols .sec,#p-mes{min-height:0}
   .cols .plate,#p-mes .plate{flex:1}
   .plate-b{flex:1;min-height:0;overflow:auto}
@@ -445,6 +446,15 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
   .task-meta{font-size:11.5px;gap:3px 6px}
   .pill{font-size:10.5px;padding:0 6px;line-height:16px}
   .import .btn{min-height:0;padding:7px 9px;font-size:12.5px;line-height:1.25}
+  .habits{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+  .habit{grid-template-columns:auto minmax(0,1fr);grid-template-areas:"name name" "cells tick";align-items:center;gap:5px 4px;padding:6px 6px 7px;border-radius:8px}
+  .habit-name{font-size:11.5px}
+  .chev{display:none}
+  .cells{--cell:5px;gap:1px;justify-self:start;cursor:pointer}   /* a glance only: tapping it opens the full history */
+  .cells .cell{pointer-events:none;border-radius:1px;box-shadow:none}
+  .cells .cell.today{outline:0;box-shadow:inset 0 0 0 1px var(--paint)}
+  .tick{justify-self:end;width:100%;max-width:38px;height:auto;aspect-ratio:1;border-radius:8px}
+  .tick svg{width:18px;height:18px}
   .sync-pill{width:36px;padding:0;justify-content:center}
   .sync-pill span{display:none}
   .sync-pill i{left:20px}
@@ -1197,7 +1207,7 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
         <button type="button" class="habit-open" data-act="habit-history" data-h="${esc(h.id)}" title="Ver todo el historial de ${esc(h.name)}">
           <span class="habit-name" role="heading" aria-level="3">${esc(h.name)}</span><span class="chev" aria-hidden="true">›</span>
         </button>
-        <div class="cells" role="group" aria-label="${esc(h.name)}: esta semana y las cuatro anteriores, de lunes a domingo">` +
+        <div class="cells" role="group" data-act="habit-history" data-h="${esc(h.id)}" aria-label="${esc(h.name)}: esta semana y las cuatro anteriores, de lunes a domingo">` +
         days.map(d => {
           if (d > t) return `<span class="cell future" title="${fmtShort(d)}"></span>`;
           const o = isOn(h.id, d);
