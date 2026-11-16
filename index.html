@@ -190,7 +190,8 @@ body[data-tab="mes"] #v-mes{display:block}
 .rel{font-size:12.5px;color:var(--muted)}
 .d-sm{display:none}
 .rel.is-today{color:var(--light);font-weight:600}
-#btn-today{flex-basis:100%}
+.rel-line{display:flex;align-items:baseline;justify-content:center;gap:8px;flex-wrap:wrap}
+.linkish{padding:0;border:0;background:none;color:var(--light);font:600 12.5px/1.2 var(--body);text-decoration:underline;text-underline-offset:2px;cursor:pointer}
 .empty{color:var(--muted);font-size:13.5px}
 .allday{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
 .allday-item,.flag-item{display:inline-flex;gap:7px;align-items:baseline;text-align:left;border:1.5px dashed rgba(246,236,223,.7);border-radius:6px;background:var(--field);padding:3px 8px;font:500 12.5px/1.3 var(--body);cursor:pointer;overflow-wrap:anywhere}
@@ -259,6 +260,8 @@ input::placeholder,textarea::placeholder{color:var(--muted);opacity:.85}
 ::view-transition-group(*){animation-duration:.28s}
 
 /* ---------- Calendario ---------- */
+/* the calendar's date range, up beside the controls, while the calendar is on screen */
+.cal-range{display:none;align-items:center;height:36px;padding:0 12px;border:1px solid var(--line);border-radius:9px;background:var(--plate);font:400 1rem/1 var(--stencil);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
 .monthnav{display:flex;align-items:center;gap:6px;flex:1 1 100%;justify-content:space-between;padding-bottom:4px}
 .monthnav strong{flex:1;text-align:center;padding:9px 12px 7px;border:1px solid var(--line);border-radius:9px;background:var(--plate);font:400 1.1rem/1 var(--stencil);letter-spacing:.05em;text-transform:uppercase}
 #p-mes .sec-h{flex-wrap:wrap;row-gap:12px}
@@ -285,6 +288,7 @@ input::placeholder,textarea::placeholder{color:var(--muted);opacity:.85}
 .day.past > *{opacity:.55}
 .day-n{font:600 13px/1.2 var(--body);font-variant-numeric:tabular-nums}
 .day.today .day-n{color:var(--light)}
+.day.sel{border-color:var(--paint);box-shadow:inset 0 0 0 1.5px var(--paint)}
 .mchip{display:block;padding:1px 2px;border-radius:4px;font:500 9.5px/1.25 var(--body);text-align:center;overflow-wrap:anywhere}
 .mchip b{font-weight:600;letter-spacing:.02em}
 .mchip.ex{background:color-mix(in oklab,var(--c,var(--paint)) 38%,var(--field));box-shadow:inset 0 0 0 1.5px var(--c,var(--paint))}
@@ -358,8 +362,16 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
   .monthnav strong{flex:0 0 auto;min-width:9em}
 }
 /* ---------- wide: one screen, agenda and tasks half and half ---------- */
+/* big screens: agenda, tasks and calendar side by side on one page; the Agenda/Calendario switch is not needed */
+@media (min-width:1280px){
+  body.three .seg{display:none}
+  body.three .cols{grid-template-columns:minmax(0,.95fr) minmax(0,.95fr) minmax(0,1.5fr)}
+  body.three #p-mes{padding-top:50px}       /* lines its plate up with the agenda and tasks below their titles */
+  body.three .day{min-height:78px}
+}
 @media (min-width:980px){
   .top{padding:10px 20px 10px 24px}
+  body[data-tab="mes"] .cal-range,body.three .cal-range{display:inline-flex}
   .views{padding:0 24px 22px}
   .tabs{display:none}
   .seg{display:inline-flex}
@@ -371,13 +383,15 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
   #p-mes{flex:1;min-height:0}
   .sec-habits{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:22px}
   .sec-habits .sec-h{flex-direction:column;align-items:flex-start;justify-content:center;gap:10px;min-height:0}
-  .habit{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"name cells" "tick cells";align-items:start;padding:9px 11px}
+  /* habit cards as narrow as their content, side by side: name and tick on the left, the five weeks on the right */
+  .habits{display:flex;flex-wrap:wrap;gap:10px}
+  .habit{flex:0 0 auto;grid-template-columns:minmax(34px,max-content) auto;grid-template-areas:"name cells" "tick cells";align-items:start;gap:6px 12px;padding:9px 11px}
+  .habit-name{max-width:9.5em}
   .tick{justify-self:start;align-self:end}
   .cols{gap:20px;min-height:0;align-items:stretch}
   .cols .sec,#p-mes{min-height:0}
   .cols .plate,#p-mes .plate{flex:1}
   .plate-b{flex:1;min-height:0;overflow:auto}
-  #btn-today{flex-basis:auto}
   .day{min-height:90px}
   .plate-b{padding-bottom:14px}
 }
@@ -448,6 +462,7 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
       <h1 id="h-date">Agenda</h1>
     </div>
     <div class="top-actions">
+      <strong class="cal-range" id="month-label" aria-live="polite"></strong>
       <button type="button" class="sync-pill" id="sync-pill" data-act="settings" data-sect="sync" hidden>
         <svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><path d="M7 18.5h10.2a4.3 4.3 0 0 0 .5-8.57A6 6 0 0 0 6.3 9.4 4.6 4.6 0 0 0 7 18.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
         <i aria-hidden="true"></i><span></span>
@@ -490,12 +505,11 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
               </button>
               <div class="daynav-label">
                 <strong id="day-label"></strong>
-                <span id="day-rel" class="rel"></span>
+                <span class="rel-line"><span id="day-rel" class="rel"></span><button type="button" class="linkish" id="btn-today" data-act="today" hidden>Volver a hoy</button></span>
               </div>
               <button type="button" class="icon-btn" data-act="next-day" aria-label="Día siguiente">
                 <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
               </button>
-              <button type="button" class="btn small" id="btn-today" data-act="today" hidden>Volver a hoy</button>
             </div>
             <div class="plate-b" id="horario-body"></div>
           </div>
@@ -529,14 +543,7 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
     </div>
 
     <div class="view" id="v-mes">
-      <section class="sec" id="p-mes" aria-labelledby="t-mes">
-        <header class="sec-h">
-          <h2 class="tag" id="t-mes">Calendario</h2>
-          <div class="monthnav">
-            <strong id="month-label"></strong>
-            <button type="button" class="btn small" id="cal-today" data-act="cal-today" hidden>Volver a hoy</button>
-          </div>
-        </header>
+      <section class="sec" id="p-mes" aria-label="Calendario">
         <div class="plate">
           <div class="plate-b" id="mes-body"></div>
         </div>
@@ -579,6 +586,7 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
   const LS_KEY = NS + '.v1';
   const HOUR_H = 38;
   const WIDE = window.matchMedia('(min-width: 980px)');
+  const THREE = window.matchMedia('(min-width: 1280px)');   // agenda, tasks and calendar on one page
   const EMBED = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
   const $ = (s, r = document) => r.querySelector(s);
   const pad = n => String(n).padStart(2, '0');
@@ -1300,7 +1308,6 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
     const weeks = 2 + ui.calBefore + ui.calAhead, end = addDays(start, weeks * 7 - 1);
     const s0 = fromYmd(start), e0 = fromYmd(end);
     $('#month-label').textContent = `${s0.getDate()} ${MES3[s0.getMonth()]} – ${e0.getDate()} ${MES3[e0.getMonth()]}${e0.getFullYear() !== s0.getFullYear() ? ' ' + e0.getFullYear() : ''}`;
-    $('#cal-today').hidden = ui.calBefore === 0;
     let html = '<div class="month"><div class="dows" aria-hidden="true">' + DOW3.map(d => `<span class="dow">${d}</span>`).join('') + '</div>';
     const sep = (text, extra = '') => `<div class="cal-sep"><span>${text}</span><i></i>${extra}</div>`;
     for (let w = 0; w < weeks; w++) {
@@ -1309,6 +1316,7 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
       if (w === 0) {
         const a = fromYmd(ws), b = fromYmd(we);
         html += sep(a.getMonth() === b.getMonth() ? monthName(a, true) : `${monthName(a, a.getFullYear() !== b.getFullYear())} · ${monthName(b, true)}`,
+          (ui.calBefore ? '<button type="button" class="btn small cal-back" data-act="cal-today">Volver a hoy</button>' : '') +
           '<button type="button" class="btn small cal-back" data-act="cal-before">↑ Semanas anteriores</button>');
       } else if (first) {
         const f = fromYmd(first);
@@ -1330,7 +1338,7 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
         const label = [cap(fmtLong(d)), d < t ? 'ya pasado' : '', subs.length ? 'clases de ' + subs.join(', ') : '',
           labs.length ? 'prácticas de ' + labs.map(x => x.subj).join(', ') : '', exams.length ? plural(exams.length, 'examen', 'exámenes') : '',
           tasks.length ? plural(tasks.length, 'entrega', 'entregas') : '', citas.length ? plural(citas.length, 'cita', 'citas') : ''].filter(Boolean).join(', ');
-        html += `<button type="button" class="day ${d === t ? 'today' : ''} ${d < t ? 'past' : ''}" data-act="pick-day" data-d="${d}" aria-label="${esc(label)}" title="${esc(label)}">
+        html += `<button type="button" class="day ${d === t ? 'today' : ''} ${d < t ? 'past' : ''} ${THREE.matches && d === ui.date && d !== t ? 'sel' : ''}" data-act="pick-day" data-d="${d}" aria-label="${esc(label)}" title="${esc(label)}">
           <span class="day-n">${dd.getDate()}${dd.getDate() === 1 ? ' ' + MES3[dd.getMonth()] : ''}</span>${chips.slice(0, 3).join('')}${more}
           ${subs.length ? `<span class="mcls">${subs.map(s => `<i class="${subjCls(s)}">${esc(s)}</i>`).join('')}</span>` : ''}
         </button>`;
@@ -1353,7 +1361,7 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
     });
     if (tab === 'hoy') { ui.scroll = true; renderHorario(); }
   }
-  function goDate(d) { ui.date = d; ui.scroll = true; renderHorario(); }
+  function goDate(d) { ui.date = d; ui.scroll = true; renderHorario(); if (THREE.matches) renderMes(); }
   const transition = fn => {
     const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (document.startViewTransition && !reduce) { try { document.startViewTransition(fn); return; } catch (e) { /* fall through */ } }
@@ -1787,7 +1795,9 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
     'cal-more': () => { ui.calAhead += 8; renderMes(); },
     'cal-today': () => { ui.calBefore = 0; ui.calAhead = 8; renderMes(); const sc = calScroller(); if (sc) sc.scrollTop = 0; },
     'pick-day': el => {
-      ui.date = el.dataset.d; setTab('hoy');
+      ui.date = el.dataset.d;
+      if (THREE.matches) { ui.scroll = true; renderHorario(); renderMes(); return; }   // the agenda is right beside it
+      setTab('hoy');
       if (!WIDE.matches) requestAnimationFrame(() => $('#p-horario').scrollIntoView({ block: 'start' }));
     },
     'import-ics': () => $('#ics-file').click(),
@@ -1829,6 +1839,16 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
   setInterval(tick, 60000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) tick(); });
 
+  /* on a big screen the calendar joins the day page as a third column; on smaller ones it keeps its own tab */
+  function placeCal() {
+    const cal = $('#p-mes'), cols = $('.cols'), home = $('#v-mes'), three = THREE.matches;
+    document.body.classList.toggle('three', three);
+    if (three && cal.parentElement !== cols) cols.appendChild(cal);
+    if (!three && cal.parentElement !== home) home.appendChild(cal);
+    if (three && ui.tab !== 'hoy') setTab('hoy');
+  }
+  placeCal();
+  THREE.addEventListener('change', () => { placeCal(); ui.scroll = true; renderHorario(); renderMes(); });
   setTab('hoy');
   renderAll();
   bgReady = (async () => {                 // own photo first; otherwise the one that ships with the app
