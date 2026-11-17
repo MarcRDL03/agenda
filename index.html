@@ -259,6 +259,27 @@ input::placeholder,textarea::placeholder{color:var(--muted);opacity:.85}
 .pill i{width:8px;height:8px;border-radius:2px;background:var(--c,var(--paint))}
 .import{margin-top:18px;display:grid;gap:6px;justify-items:start}
 .add-task{display:none}
+.strip{display:none}                        /* the two-week strip is for the phone; the PC keeps its calendar */
+.habit-edit{display:none}                   /* the PC's "Editar" tile after the habit cards */
+.strip-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.sday{position:relative;display:flex;flex-direction:column;gap:3px;min-width:0;min-height:52px;padding:4px 4px 5px;border:1px solid var(--line);border-radius:7px;background:var(--glass);-webkit-backdrop-filter:var(--frost);backdrop-filter:var(--frost);color:var(--paint);text-align:left;cursor:pointer;overflow:hidden}
+.sday:hover{filter:brightness(1.12)}
+.sd-n{display:flex;align-items:baseline;gap:4px;font:600 13px/1 var(--body);font-variant-numeric:tabular-nums}
+.sd-n b{font:400 9.5px/1 var(--stencil);letter-spacing:.05em;color:var(--muted)}
+.sd-m{display:flex;flex-wrap:wrap;gap:2px}
+.sm{padding:0 3px;border-radius:3px;font:600 8.5px/1.45 var(--body);font-style:normal;letter-spacing:.02em;white-space:nowrap}
+.sm.ex{background:color-mix(in oklab,var(--c,var(--paint)) 40%,var(--field));box-shadow:inset 0 0 0 1px var(--c,var(--paint))}
+.sm.lab{background-image:repeating-linear-gradient(135deg,color-mix(in oklab,var(--c,var(--paint)) 50%,transparent) 0 2px,transparent 2px 5px);box-shadow:inset 0 0 0 1px color-mix(in oklab,var(--c,var(--paint)) 75%,transparent)}
+.sm.dl{box-shadow:inset 0 0 0 1px rgba(246,236,223,.7)}
+.sm.dl.done{text-decoration:line-through;color:var(--muted)}
+.sm.ci,.sm.more{background:rgba(255,222,190,.14)}
+.sd-c{display:flex;gap:2px;margin-top:auto}
+.sd-c i{flex:1;max-width:14px;height:3px;border-radius:2px;background:var(--c,var(--paint))}
+.sday.today{border-color:var(--light);box-shadow:inset 0 0 0 1.5px var(--light)}
+.sday.today .sd-n{color:var(--light)}
+.sday.sel{border-color:var(--paint);box-shadow:inset 0 0 0 1.5px var(--paint)}
+.sday.past{background-image:linear-gradient(to top right,transparent calc(50% - 1px),rgba(246,236,223,.45) calc(50% - 1px) calc(50% + 1px),transparent calc(50% + 1px))}
+.sday.past > *{opacity:.55}
 input[type="date"],input[type="time"]{min-width:0;max-width:100%}
 /* phones zoom into any field set smaller than 16px when it is tapped */
 @media (pointer:coarse){input,select,textarea{font-size:16px !important}}
@@ -382,18 +403,19 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
   .tabs{display:none}
   .seg{display:inline-flex}
   .view{overflow:hidden}
-  body[data-tab="hoy"] #v-hoy{display:grid;grid-template-rows:auto minmax(0,1fr);gap:18px}
-  body.onboarding[data-tab="hoy"] #v-hoy{grid-template-rows:auto auto minmax(0,1fr)}
+  body[data-tab="hoy"] #v-hoy{display:flex;flex-direction:column;gap:14px}
+  #v-hoy > .cols{flex:1}
   .toast{bottom:24px}
   body[data-tab="mes"] #v-mes{display:flex;flex-direction:column}
   #p-mes{flex:1;min-height:0}
-  .sec-habits{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:22px}
-  .sec-habits .sec-h{flex-direction:column;align-items:flex-start;justify-content:center;gap:10px;min-height:0}
   /* habit cards as narrow as their content, side by side: name and tick on the left, the five weeks on the right */
   .habits{display:flex;flex-wrap:wrap;gap:10px}
   .habit{flex:0 0 auto;grid-template-columns:minmax(34px,max-content) auto;grid-template-areas:"name cells" "tick cells";align-items:start;gap:6px 12px;padding:9px 11px}
   .habit-name{max-width:9.5em}
   .tick{justify-self:start;align-self:end}
+  .habit-edit{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:74px;padding:8px 12px;border:1.5px dashed rgba(246,236,223,.45);border-radius:10px;background:var(--plate);color:var(--muted);font:600 12.5px/1.2 var(--body);cursor:pointer}
+  .habit-edit span{font:400 22px/1 var(--body);color:var(--paint)}
+  .habit-edit:hover{color:var(--paint);border-color:rgba(246,236,223,.8)}
   .cols{gap:20px;min-height:0;align-items:stretch}
   #p-tareas{order:-1}                        /* tasks on the left, then the day, then (on big screens) the calendar */
   .cols .sec,#p-mes{min-height:0}
@@ -452,6 +474,7 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
   .task-meta{font-size:11.5px;gap:3px 6px}
   .pill{font-size:10.5px;padding:0 6px;line-height:16px}
   .import .btn{min-height:0;padding:7px 9px;font-size:12.5px;line-height:1.25}
+  .strip{display:block}
   .habits{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
   .habit{grid-template-columns:auto minmax(0,1fr);grid-template-areas:"name name" "cells tick";align-items:center;gap:5px 4px;padding:6px 6px 7px;border-radius:8px}
   .habit-name{font-size:11.5px}
@@ -501,13 +524,10 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
 
     <div class="view" id="v-hoy">
       <section class="onboard" id="onboard" aria-label="Primeros pasos" hidden></section>
-      <section class="sec sec-habits" id="p-habitos" aria-labelledby="t-habitos">
-        <header class="sec-h">
-          <h2 class="tag" id="t-habitos">Hábitos</h2>
-          <button type="button" class="btn small" data-act="habits-manage">Editar</button>
-        </header>
+      <section class="sec sec-habits" id="p-habitos" aria-label="Hábitos">
         <div class="habits" id="habitos-body"></div>
       </section>
+      <section class="strip" id="strip" aria-label="Esta semana y la siguiente"></section>
 
       <div class="cols">
         <section class="sec" id="p-horario" aria-labelledby="t-horario">
@@ -1254,7 +1274,9 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
         <button type="button" class="tick ${on ? 'on' : ''}" data-act="toggle-cell" data-h="${esc(h.id)}" data-d="${t}" aria-pressed="${on}" aria-label="Marcar hoy: ${esc(h.name)}" title="${on ? 'Hecho hoy. Pulsa para desmarcar' : 'Marcar como hecho hoy'}">${CHECK_BIG}</button>
       </article>`;
     }
-    if (!hs.length) html = '<p class="none">Aún no hay hábitos. Pulsa «Editar» para añadir el primero.</p>';
+    if (!hs.length) html = '<p class="none">Aún no hay hábitos. Añádelos en Ajustes → Hábitos.</p>';
+    // on the PC the habits can also be edited from here; on the phone only from Ajustes
+    html += `<button type="button" class="habit-edit" data-act="habits-manage" title="Añadir, cambiar o quitar hábitos"><span aria-hidden="true">+</span>Editar</button>`;
     $('#habitos-body').innerHTML = html;
   }
 
@@ -1334,7 +1356,8 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
     </li>`;
   }
   function renderTareas() {
-    const all = live(S.tasks);
+    const t = todayStr();
+    const all = live(S.tasks).filter(x => !x.date || (!x.done && x.date < t));
     const key = x => (x.date || '9999-99-99') + ' ' + (x.time || '99:99');
     const pend = all.filter(x => !x.done).sort((a, b) => key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : (a.created || 0) - (b.created || 0));
     const done = all.filter(x => x.done).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
@@ -1343,6 +1366,29 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
     html += pend.length ? `<ul class="tasks">${pend.map(taskRow).join('')}</ul>` : '<p class="none">Nada pendiente.</p>';
     if (done.length) html += `<h3 class="sub">Hechas <span class="count">${done.length}</span></h3><ul class="tasks">${done.map(taskRow).join('')}</ul>`;
     $('#tasks-lists').innerHTML = html;
+  }
+
+  /* This week and the next, under the habits: a glance at what is coming. A day opens in the agenda beside it. */
+  const DOW1 = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+  function renderStrip() {
+    const el = $('#strip'); if (!el) return;
+    const t = todayStr(), start = mondayOf(t);
+    let html = '<div class="strip-grid">';
+    for (let i = 0; i < 14; i++) {
+      const d = addDays(start, i), its = itemsFor(d), tasks = live(S.tasks).filter(x => x.date === d), marks = [];
+      for (const e of its.filter(x => x.kind === 'examen')) marks.push(`<i class="sm ex ${subjCls(e.subj)}">EX</i>`);
+      for (const e of its.filter(x => x.kind === 'clase' && x.lab)) marks.push(`<i class="sm lab ${subjCls(e.subj)}">LAB</i>`);
+      for (const x of tasks) marks.push(`<i class="sm dl ${x.done ? 'done' : ''}">${x.subj ? 'ENT' : 'TAR'}</i>`);
+      for (const e of its.filter(x => x.kind === 'cita')) marks.push('<i class="sm ci">CITA</i>');
+      const subs = [...new Set(its.filter(x => x.kind === 'clase' && !x.lab).map(x => x.subj))];
+      const label = [cap(fmtLong(d)), subs.length ? 'clases de ' + subs.join(', ') : '', marks.length ? plural(marks.length, 'cosa más', 'cosas más') : ''].filter(Boolean).join(', ');
+      html += `<button type="button" class="sday ${d === t ? 'today' : ''} ${d < t ? 'past' : ''} ${d === ui.date && d !== t ? 'sel' : ''}" data-act="strip-day" data-d="${d}" aria-label="${esc(label)}" title="${esc(label)}">
+        <span class="sd-n"><b>${DOW1[i % 7]}</b>${fromYmd(d).getDate()}</span>
+        <span class="sd-m">${marks.slice(0, 2).join('')}${marks.length > 2 ? `<i class="sm more">+${marks.length - 2}</i>` : ''}</span>
+        ${subs.length ? `<span class="sd-c">${subs.map(s => `<i class="${subjCls(s)}"></i>`).join('')}</span>` : ''}
+      </button>`;
+    }
+    el.innerHTML = html + '</div>';
   }
 
   /* The calendar is a run of weeks rather than a month: it opens on last week (all crossed out) and this week (crossed
@@ -1398,7 +1444,7 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
   }
   const calScroller = () => (WIDE.matches ? $('#mes-body') : $('#v-mes'));
 
-  function renderAll() { renderOnboard(); renderTop(); renderHorario(true); renderHabitos(); renderTareas(); renderMes(); }
+  function renderAll() { renderOnboard(); renderTop(); renderHorario(true); renderHabitos(); renderStrip(); renderTareas(); renderMes(); }
   function setTab(tab) {
     ui.tab = tab; document.body.dataset.tab = tab;
     document.querySelectorAll('[data-act="tab"]').forEach(b => {
@@ -1408,7 +1454,7 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
     });
     if (tab === 'hoy') { ui.scroll = true; renderHorario(); }
   }
-  function goDate(d) { ui.date = d; ui.scroll = true; renderHorario(); if (THREE.matches) renderMes(); }
+  function goDate(d) { ui.date = d; ui.scroll = true; renderHorario(); renderStrip(); if (THREE.matches) renderMes(); }
   const transition = fn => {
     const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (document.startViewTransition && !reduce) { try { document.startViewTransition(fn); return; } catch (e) { /* fall through */ } }
@@ -1483,7 +1529,7 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
   function toggleTask(id) {
     const x = S.tasks.find(k => k.id === id); if (!x) return;
     x.done = !x.done; x.doneAt = x.done ? Date.now() : null; x.upd = Date.now(); save();
-    transition(() => { renderTareas(); renderTop(); renderHorario(true); renderMes(); });
+    transition(() => { renderTareas(); renderTop(); renderHorario(true); renderStrip(); renderMes(); });
   }
 
   function openEvent(id, preset) {
@@ -1665,6 +1711,10 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
       const skipped = live(S.classes).filter(c => c.weekly && c.skip.length).sort(byWeek);
       const mine = !!(bg && bg.blob);
       const body = openDlg('Ajustes', `${WEB ? syncSection() : ''}
+        <div class="sect" id="sect-habits"><h3>Hábitos</h3>
+          <p class="hint">${plural(habits().length, 'hábito', 'hábitos')}: ${esc(habits().map(h => h.name).join(', ') || 'ninguno todavía')}.</p>
+          <div class="dlg-actions" style="justify-content:flex-start"><button type="button" class="btn" data-act="habits-manage">Añadir, cambiar o quitar hábitos</button></div>
+        </div>
         <div class="sect" id="sect-term"><h3>Curso</h3>
           <div class="field"><label for="s-end">Último día de clase</label><input id="s-end" type="date" value="${esc(S.settings.termEnd || '')}">
           <p class="hint">Las clases de teoría se repiten cada semana hasta esta fecha.</p></div>
@@ -1857,6 +1907,7 @@ input[type="range"]{width:100%;height:28px;margin:0;accent-color:var(--light);ba
       save(); renderHabitos(); renderTop();
     },
     'habits-manage': () => openHabits(),
+    'strip-day': el => goDate(el.dataset.d),
     'habit-history': el => openHistory(el.dataset.h),
     'settings': el => openSettings(el.dataset.sect),
     'close-dlg': () => closeDlg(),
